@@ -18,6 +18,38 @@ class VideoCaptureBase(object):
     def getFrame(self):
         return None
 
+class VideoFileVideoCapture(object):
+    def __init__(self, file_path):
+        self.type = "VideoFileVideoCapture"
+        self.file_path = file_path
+        self.cap = cv2.VideoCapture()
+    
+    def initialize(self):
+        if self.cap.isOpened():
+            self.cap.release()
+
+        self.cap = cv2.VideoCapture(self.file_path)
+        if not self.cap.isOpened():
+            print("initialize " + self.type + " failed: open video capture failed.")
+            self.cap.release()
+            return False
+        
+        ret, frame = self.cap.read()
+        if ret == False or frame is None:
+            print("initialize " + self.type + " failed: read frame failed.")
+            self.cap.release()
+            return False
+
+        return True
+    
+    def release(self):
+        if self.cap.isOpened():
+            self.cap.release()
+        return True
+    
+    def getFrame(self):
+        return self.cap.read()
+
 class RTSPVideoCaptureBasic(VideoCaptureBase):
     def __init__(self, rtsp_addr):
         super().__init__()
@@ -105,10 +137,12 @@ class RTSPVideoCaptureAsync(VideoCaptureBase):
         return True, frame
 
 if __name__ == "__main__":
-    cap = RTSPVideoCaptureAsync("rtsp://admin:abcd1234@192.168.1.64:554//Streaming/Channels/1")
+    # cap = RTSPVideoCaptureAsync("rtsp://admin:abcd1234@192.168.1.64:554//Streaming/Channels/1")
+    cap = VideoFileVideoCapture("./VID_20211115_232518.mp4")
     if cap.initialize() == True:
         while True:
             ret, frame = cap.getFrame()
+            frame = cv2.resize(frame, (640, 640))
             cv2.imshow("img", frame)
-            cv2.waitKey(1000)
+            cv2.waitKey(10)
         cap.release()

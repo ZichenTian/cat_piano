@@ -140,9 +140,9 @@ def fuse_img(img1, img2, alpha, beta):
     return img
 
 if __name__ == '__main__':
-    img = np.zeros((600, 800, 3), dtype=np.uint8)
+    img = np.zeros((600, 600, 3), dtype=np.uint8)
     img[:,:] = (255, 255, 0)
-    basic_size = 100
+    basic_size = 80
     x_offset = int(basic_size * 0.75)
     y_offset = int(basic_size * 0.75)
     volume = 100
@@ -166,7 +166,7 @@ if __name__ == '__main__':
         key.init_graph_layer(img.shape, basic_size)
     
     y = 200
-    for x in range(0, 800, 5):
+    for x in range(0, 600, 5):
         position = (x, y)
         for key in piano_keys:
             key.play(position)

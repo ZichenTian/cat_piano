@@ -49,6 +49,12 @@ class VideoFileVideoCapture(object):
     
     def getFrame(self):
         return self.cap.read()
+    
+    def grab(self):
+        return self.cap.grab()
+    
+    def retrieve(self):
+        return self.cap.retrieve()
 
 class RTSPVideoCaptureBasic(VideoCaptureBase):
     def __init__(self, rtsp_addr):
@@ -138,11 +144,11 @@ class RTSPVideoCaptureAsync(VideoCaptureBase):
 
 if __name__ == "__main__":
     # cap = RTSPVideoCaptureAsync("rtsp://admin:abcd1234@192.168.1.64:554//Streaming/Channels/1")
-    cap = VideoFileVideoCapture("./VID_20211115_232518.mp4")
+    cap = VideoFileVideoCapture("a6353597ca0d6cb4e59b5251a6acc4a3.mp4")
     if cap.initialize() == True:
         while True:
             ret, frame = cap.getFrame()
-            frame = cv2.resize(frame, (640, 640))
+            frame = cv2.resize(frame, (160, 160))
             cv2.imshow("img", frame)
             cv2.waitKey(10)
         cap.release()

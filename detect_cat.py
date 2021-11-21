@@ -29,6 +29,7 @@ g_pplnntype2numpytype = {
 def RegisterEngines():
     engines = []
 
+    # create x86 engine
     x86_options = pplnn.X86EngineOptions()
     x86_engine = pplnn.X86EngineFactory.Create(x86_options)
 
@@ -40,14 +41,17 @@ class ModelRunner(object):
         self.__initialize(model_path)
     
     def __initialize(self, model_path):
+        # register engines
         engines = RegisterEngines()
         if len(engines) == 0:
             raise Exception('failed to register engines')
 
+        # create runtime builder
         runtime_builder = pplnn.OnnxRuntimeBuilderFactory.CreateFromFile(model_path, engines)
         if not runtime_builder:
-            raise Exception('failed to create runtime from file: %s' % (model_path))
+            raise Exception('failed to create runtime builder from file: %s' % (model_path))
 
+        # create runtime
         self.runtime = runtime_builder.CreateRuntime()
         if not self.runtime:
             raise Exception('failed to create runtime')
@@ -59,27 +63,35 @@ class ModelRunner(object):
         if not self.runtime:
             raise Exception('runtime not created')
         
+        # get input tensor info
         tensor = self.runtime.GetInputTensor(0)
         shape = tensor.GetShape()
         np_data_type = g_pplnntype2numpytype[shape.GetDataType()]
         dims = shape.GetDims()
 
+        # feed input data
+        input = np.ascontiguousarray(input) # use contiguousarray to avoid calc error
         status = tensor.ConvertFromHost(input)
         if status != pplcommon.RC_SUCCESS:
             raise Exception('failed to set input data')
         
+        # start to inference
         status = self.runtime.Run()
         if status != pplcommon.RC_SUCCESS:
             raise Exception('failed to run')
         
+        # wait for inference finished
         status = self.runtime.Sync()
         if status != pplcommon.RC_SUCCESS:
             raise Exception('failed to sync')
         
+        # get output data
         out_datas = {}
         for i in range(self.runtime.GetOutputCount()):
+            # get output tensor info
             tensor = self.runtime.GetOutputTensor(i)
             tensor_name = tensor.GetName()
+            # fetch output data
             tensor_data = tensor.ConvertToHost()
             if not tensor_data:
                 raise Exception('failed to get output ' + tensor_name)
@@ -92,6 +104,7 @@ class ModelRunner(object):
 class CatDetector(object):
     def __init__(self, model_path):
         self.model_runner = ModelRunner(model_path)
+        self.input_img_h, self.input_img_w = self.model_runner.get_input_tensor_shape()[2:]
     
     def generate_proposals(self, output, anchors, stride, thresh):
         results = []
@@ -163,13 +176,13 @@ class CatDetector(object):
         return filtered_proposals
     
     def run(self, img):
-        img = cv2.resize(img, (640, 640))
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        img = img.transpose(2, 0, 1)
-        img = img.astype(dtype = np.float32)
-        img = np.ascontiguousarray(img)
-        img /= 255
-        img = np.expand_dims(img, axis=0)
+        # preprocess
+        img = cv2.resize(img, (self.input_img_w, self.input_img_h)) # resize
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)                  # BGR -> RGB
+        img = img.transpose(2, 0, 1)                                # HWC -> CHW
+        img = img.astype(dtype = np.float32)                        # uint8 -> fp32
+        img /= 255                                                  # normalize
+        img = np.expand_dims(img, axis=0)                           # add batch dimension
         
         outputs = self.model_runner.forward(img)
         output = outputs['output']
@@ -192,7 +205,7 @@ if __name__ == '__main__':
     cat_detector = CatDetector('./catDetectorOp11.onnx')
     img = cv2.imread('./cat1.jpg')
     proposals = cat_detector.run(img)
-    resized_img = cv2.resize(img, (640, 640))
+    resized_img = cv2.resize(img, (cat_detector.input_img_w, cat_detector.input_img_h))
     for x0, y0, x1, y1, _, _ in proposals:
         cv2.rectangle(resized_img, (int(x0), int(y0)), (int(x1), int(y1)), (0, 0, 255), 2)
     cv2.imshow('img', resized_img)

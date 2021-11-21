@@ -139,13 +139,7 @@ def fuse_img(img1, img2, alpha, beta):
     img += (img2 * beta).astype(np.uint8)
     return img
 
-if __name__ == '__main__':
-    img = np.zeros((600, 600, 3), dtype=np.uint8)
-    img[:,:] = (255, 255, 0)
-    basic_size = 80
-    x_offset = int(basic_size * 0.75)
-    y_offset = int(basic_size * 0.75)
-    volume = 100
+def init_piano(img_show_h, img_show_w, basic_size, volume, x_offset, y_offset):
     piano_keys = [
         PianoKey(KeyType.WHITE_KEY_LEFT,    55, (x_offset + basic_size * 0, y_offset),   volume), 
         PianoKey(KeyType.WHITE_KEY,         57, (x_offset + basic_size * 1, y_offset),   volume), 
@@ -163,7 +157,23 @@ if __name__ == '__main__':
     ]
 
     for key in piano_keys:
-        key.init_graph_layer(img.shape, basic_size)
+        key.init_graph_layer((img_show_h, img_show_w, 3), basic_size)
+    
+    return piano_keys
+
+if __name__ == '__main__':
+    img_h = 640
+    img_w = 640
+    basic_size = 80
+    volum = 100
+
+    x_offset = int(basic_size * 0.75)
+    y_offset = int(basic_size * 0.75)
+
+    piano_keys = init_piano(img_h, img_w, basic_size, volum, x_offset, y_offset)
+
+    img = np.zeros((img_h, img_w, 3), dtype=np.uint8)
+    img[:,:] = (0, 0, 0)
     
     y = 200
     for x in range(0, 600, 5):
@@ -171,9 +181,5 @@ if __name__ == '__main__':
         for key in piano_keys:
             key.play(position)
         piano_img = sum_up_all_key_img(img.shape, piano_keys)
-        cv2.imshow('img_update', fuse_img(img, piano_img, 0.5, 0.5))
+        cv2.imshow('img_update', fuse_img(img, piano_img, 0.0, 1.0))
         cv2.waitKey(10)
-
-
-
-
